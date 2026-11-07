@@ -1,0 +1,78 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    depends_on:
+      - temporal-postgres
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: temporal-postgres
+    ports: ["7233:7233"]
+
+  temporal-postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    volumes: ["temporal-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    command: ["npm", "run", "start:api"]
+    environment:
+      PORT: 3000
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: hotel-offer-task-queue
+      REDIS_URL: redis://redis:6379
+      SUPPLIER_TIMEOUT_MS: 2500
+      CACHE_TTL_SECONDS: 900
+      SUPPLIER_A_FAIL: ${SUPPLIER_A_FAIL:-false}
+      SUPPLIER_B_FAIL: ${SUPPLIER_B_FAIL:-false}
+    ports: ["3000:3000"]
+    depends_on:
+      - redis
+      - temporal
+      - temporal-postgres
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["npm", "run", "start:worker"]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: hotel-offer-task-queue
+      REDIS_URL: redis://redis:6379
+      SUPPLIER_TIMEOUT_MS: 2500
+      CACHE_TTL_SECONDS: 900
+      SUPPLIER_A_FAIL: ${SUPPLIER_A_FAIL:-false}
+      SUPPLIER_B_FAIL: ${SUPPLIER_B_FAIL:-false}
+    depends_on:
+      - redis
+      - temporal
+      - api
+
+volumes:
+  redis-data:
+  temporal-data:

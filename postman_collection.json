@@ -1,0 +1,15 @@
+{
+  "info": {
+    "name": "Hotel Offer Orchestrator",
+    "description": "Requests for the Tripare hotel offer aggregation assignment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:3000" }],
+  "item": [
+    { "name": "Health check", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "Aggregate offers by city", "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=Delhi" } },
+    { "name": "Filter cached offers by price", "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=Delhi&minPrice=3000&maxPrice=4500" } },
+    { "name": "Supplier A mock", "request": { "method": "GET", "url": "{{baseUrl}}/supplierA/hotels?city=Delhi" } },
+    { "name": "Supplier B mock", "request": { "method": "GET", "url": "{{baseUrl}}/supplierB/hotels?city=Delhi" } }
+  ]
+}
